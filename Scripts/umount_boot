@@ -1,0 +1,18 @@
+#!/bin/sh
+
+BOOT=/boot
+
+if (mountpoint -q ${BOOT}) # Mounted from uSD
+then
+	if (! umount ${BOOT} 2> /dev/null)
+	then
+		echo "Unmounting boot partition incomplete. Come out of ${BOOT} & retry."
+	fi
+else # Not mounted or link connected from eMMC
+	if [ -L ${BOOT} ] # Link connected from eMMC
+	then
+		rm -fr ${BOOT}
+		mkdir ${BOOT}
+	fi
+	. umount_emmc
+fi

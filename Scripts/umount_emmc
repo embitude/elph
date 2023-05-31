@@ -1,0 +1,39 @@
+#!/bin/sh
+
+if [ -z ${EMMC_ROOT+x} ] || [ -z ${EMMC_BOOT+x} ] # Not set - need not unset
+then
+	UNSET=0
+	EMMC_ROOT=/emmc_root
+	EMMC_BOOT=/emmc_boot
+else
+	UNSET=1
+fi
+
+if (mountpoint -q ${EMMC_BOOT}) # Mounted
+then
+	if (umount ${EMMC_BOOT} 2> /dev/null)
+	then
+		rmdir ${EMMC_BOOT}
+	else
+		echo "Unmounting eMMC partitions incomplete. Come out of ${EMMC_BOOT} & retry."
+	fi
+else # Not mounted or link connected or stray case - clean it up
+	rm -fr ${EMMC_BOOT}
+fi
+if (mountpoint -q ${EMMC_ROOT}) # Mounted
+then
+	if (umount ${EMMC_ROOT} 2> /dev/null)
+	then
+		rmdir ${EMMC_ROOT}
+	else
+		echo "Unmounting eMMC partitions incomplete. Come out of ${EMMC_ROOT} & retry."
+	fi
+else # Not mounted or stray case - clean it up
+	rm -fr ${EMMC_ROOT}
+fi
+
+if [ ${UNSET} -eq 1 ]
+then
+	unset EMMC_BOOT
+	unset EMMC_ROOT
+fi

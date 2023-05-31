@@ -1,0 +1,37 @@
+#!/bin/sh
+
+. mount_emmc
+
+BKUP_DIR=${EMMC_ROOT}/opt/Embitude
+
+if [ ! -f ${BKUP_DIR}/MLO ] || [ ! -f ${BKUP_DIR}/u-boot.img ]
+then
+	. umount_emmc
+	echo "No backup to restore. Run 'backup_bl' to take a backup first."
+	exit 1
+fi
+
+cd ${BKUP_DIR}
+
+if (mountpoint -q ${EMMC_BOOT}) # Old BBB Rev C
+then
+	cp -a MLO u-boot.img ${EMMC_BOOT}
+else
+	eMMC=/dev/$(ls /sys/bus/mmc/devices/mmc1*/block)
+
+	dd if=MLO of=${eMMC} bs=512 seek=256 count=256 conv=notrunc 2> /dev/null
+	dd if=u-boot.img of=${eMMC} bs=512 seek=768 count=1024 conv=notrunc 2> /dev/null
+fi
+sync
+
+cd - > /dev/null
+
+. umount_emmc
+
+if [ "$1" != "-q" ]
+then
+	echo "Restoring bootloader(s) successful."
+	echo
+	echo "*** Now, do a 'poweroff'. Then, remove the uSD (if inserted) and do a cold reboot. ***"
+	echo
+fi

@@ -1,0 +1,30 @@
+#!/bin/sh -e
+
+BOOT=/boot
+
+if [ -L ${BOOT} ] # Checking link first is important, as link to a directory also tests true for -d
+then
+	echo "Boot link ${BOOT} in use"
+	exit 2
+elif [ -d ${BOOT} ]
+then
+	if (mountpoint -q ${BOOT})
+	then
+		echo "Boot mount point ${BOOT} in use"
+		exit 1
+	fi
+else
+	echo "Boot not ready but stray file ${BOOT} exists"
+	exit 3
+fi
+
+USD=$(ls /sys/bus/mmc/devices/mmc0*/block 2> /dev/null || echo "unavailable")
+if [ "${USD}" != "unavailable" ] # Have a uSD - possibly booted from it
+then
+	mount /dev/${USD}p1 ${BOOT}
+else # W/o a uSD - setup BBB's internal eMMC boot partition
+	. mount_emmc
+
+	rmdir ${BOOT}
+	ln -s ${EMMC_BOOT} ${BOOT}
+fi

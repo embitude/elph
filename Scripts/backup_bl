@@ -1,0 +1,35 @@
+#!/bin/sh
+
+. mount_emmc
+
+BKUP_DIR=${EMMC_ROOT}/opt/Embitude
+
+if [ -f ${BKUP_DIR}/MLO ] && [ -f ${BKUP_DIR}/u-boot.img ]
+then
+	. umount_emmc
+	echo "Backup already done."
+	exit 0
+fi
+
+if (mountpoint -q ${EMMC_BOOT}) # Old BBB Rev C
+then
+	cd ${EMMC_BOOT}
+else
+	cd ${EMMC_ROOT}/opt/backup/uboot
+fi
+
+mkdir -p ${BKUP_DIR}
+cp -a MLO u-boot.img ${BKUP_DIR} 2> /dev/null
+ret=$?
+
+cd - > /dev/null
+
+. umount_emmc
+
+if [ ${ret} -eq 0 ]
+then
+	echo "Backup successful."
+else
+	echo "Backup failed."
+	exit 1
+fi

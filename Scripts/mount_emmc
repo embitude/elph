@@ -1,0 +1,70 @@
+#!/bin/sh -e
+
+EMMC=$(ls /sys/bus/mmc/devices/mmc1*/block 2> /dev/null)
+EMMC_ROOT=/emmc_root
+EMMC_BOOT=/emmc_boot
+
+if [ ! -e ${EMMC_ROOT} ]
+then
+	ROOT_ERR_CODE=0
+else
+	if [ -d ${EMMC_ROOT} ]
+	then
+		if (mountpoint -q ${EMMC_ROOT})
+		then
+			echo "eMMC root mount point ${EMMC_ROOT} in use"
+			ROOT_ERR_CODE=1
+		else
+			echo "eMMC root not mounted but ${EMMC_ROOT} is a stray directory"
+			ROOT_ERR_CODE=2
+		fi
+	else
+		echo "eMMC root not mounted but stray non-directory ${EMMC_ROOT} exists"
+		ROOT_ERR_CODE=3
+	fi
+fi
+if [ ! -e ${EMMC_BOOT} ]
+then
+	BOOT_ERR_CODE=0
+else
+	if [ -L ${EMMC_BOOT} ] # Checking link first is important, as link to a directory also tests true for -d
+	then
+		echo "eMMC boot link ${EMMC_BOOT} in use"
+		BOOT_ERR_CODE=3
+	elif [ -d ${EMMC_BOOT} ]
+	then
+		if (mountpoint -q ${EMMC_BOOT})
+		then
+			echo "eMMC boot mount point ${EMMC_BOOT} in use"
+			BOOT_ERR_CODE=1
+		else
+			echo "eMMC boot not mounted but ${EMMC_BOOT} is a stray directory"
+			BOOT_ERR_CODE=2
+		fi
+	else
+		echo "eMMC boot not ready but stray file ${EMMC_BOOT} exists"
+		BOOT_ERR_CODE=4
+	fi
+fi
+if [ ${ROOT_ERR_CODE} != 0 ] || [ ${BOOT_ERR_CODE} != 0 ]
+then
+	exit $(((${BOOT_ERR_CODE} << 4) | ${ROOT_ERR_CODE}))
+else
+	unset BOOT_ERR_CODE ROOT_ERR_CODE # Specially for those sourcing this script
+fi
+
+mkdir ${EMMC_ROOT}
+if [ ! -b /dev/${EMMC}p2 ] # Latest BBB Rev C w/ one partition only
+then
+	mount /dev/${EMMC}p1 ${EMMC_ROOT}
+	ln -s ${EMMC_ROOT}/boot ${EMMC_BOOT}
+else
+	mount /dev/${EMMC}p2 ${EMMC_ROOT}
+	if [ -f ${EMMC_ROOT}/boot/uEnv.txt ] # New BBB Rev C but not the latest one
+	then
+		ln -s ${EMMC_ROOT}/boot ${EMMC_BOOT}
+	else # Old BBB Rev C
+		mkdir ${EMMC_BOOT}
+		mount /dev/${EMMC}p1 ${EMMC_BOOT}
+	fi
+fi
