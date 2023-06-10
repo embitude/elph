@@ -1,0 +1,18 @@
+1. Install the tftp server with:
+    $ sudo apt install tftpd-hpa
+
+2. Configure the tftp server as below:
+# /etc/default/tftpd-hpa
+
+TFTP_USERNAME="<username>"
+TFTP_DIRECTORY="/var/lib/tftpboot"
+TFTP_ADDRESS=":69"
+TFTP_OPTIONS="--secure --create"
+
+3. Create the directory by name tftpboot under /var/lib and change the ownership to that of user
+ $ sudo mkdir /var/lib/tftpboot/
+ $ sudo chown -R <user>.<group> /var/lib/tftpboot
+
+4. Next, restart the sever with
+    /etc/init.d/tftpd restart
+
